@@ -3,6 +3,7 @@ from network import NeuralNetwork1Hidden
 from plots import (
     plot_classification_error,
     plot_mse,
+    plot_learning_rate,
     plot_weights,
 )
 
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     X, Y = get_xor_data()
 
     # Hiperparametry do eksperymentów w sprawozdaniu
-    HIDDEN_SIZE = 3
+    HIDDEN_SIZE = 2
     LEARNING_RATE = 0.5
     MAX_EPOCHS = 10000
     TARGET_ERROR = 0.001
@@ -32,12 +33,18 @@ if __name__ == "__main__":
     )
 
     history, final_epoch = nn.train(
-        X=X,
-        Y=Y,
-        learning_rate=LEARNING_RATE,
-        epochs=MAX_EPOCHS,
-        target_error=TARGET_ERROR,
-    )
+            X,
+            Y,
+            learning_rate=LEARNING_RATE,
+            epochs=MAX_EPOCHS,
+            batch_size=None,  # None oznacza cały zbiór (Full Batch), np. 4 dla XOR
+            target_error=1e-4,
+            momentum=0.9,
+            adaptive_lr=True,
+            lr_inc=1.05,
+            lr_dec=0.7,
+            max_error_ratio=1.04,
+        )
 
     # Podsumowanie wyników w konsoli
     final_output, _ = nn.forward(X)
@@ -79,4 +86,8 @@ if __name__ == "__main__":
         history["w2"],
         layer_name="warstwa wyjściowa (W2)",
         filename="wagi_wyjsciowa.png",
+    )
+    plot_learning_rate(
+        history["lr"],
+        filename="learning_rate.png",
     )

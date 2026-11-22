@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_mse(mse_total, mse_samples, layer_name, filename):
@@ -51,11 +52,25 @@ def plot_weights(weights_history, layer_name, filename):
     for i in range(num_weights):
         plt.plot(weights_history[:, i], label=f"Waga {i + 1}")
 
-    plt.title(f"Zmiana wartości wag w czasie uczenia – {layer_name}")
+    plt.title(f"Zmiana wartości wag w czasie uczenia - {layer_name}")
     plt.xlabel("Epoka")
     plt.ylabel("Wartość wagi")
     plt.grid(True, alpha=0.3)
     plt.legend(loc="best", ncol=2)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.close()
+
+def plot_learning_rate(lr_history, filename="learning_rate.png"):
+    epochs = np.arange(1, len(lr_history) + 1)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, lr_history, color="tab:purple", linewidth=2, label="Współczynnik uczenia (alpha)")
+    plt.title("Zmiana adaptacyjnego współczynnika uczenia (learning rate) w czasie")
+    plt.xlabel("Epoka")
+    plt.ylabel("Learning rate (alpha)")
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.legend()
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
     plt.close()
