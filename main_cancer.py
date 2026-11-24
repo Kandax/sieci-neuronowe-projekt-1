@@ -1,32 +1,30 @@
 import numpy as np
 from network import NeuralNetwork1Hidden
 from plots import (
-    plot_classification_error,
-    plot_mse,
-    plot_learning_rate,
-    plot_weights,
+    generate_plots
 )
 
 
-def get_xor_data():
-    # Przykłady jako kolumny: X ma kształt (2, 4), Y ma kształt (1, 4)
-    X = np.array([[0, 0, 1, 1], [0, 1, 0, 1]], dtype=float)
-    Y = np.array([[0, 1, 1, 0]], dtype=float)
-    return X, Y
+def get_cancer_data():
+    # Dane z pliku CSV (bez nagłówka)!!! zaimplementować 
+    # M = 1 (szkodliwy rak), B = 0 (łagodny rak)
+    # przeskalować dane wejściowe do zakresu [0, 1] (min-max normalization)
+    return 1, 1
 
 
 if __name__ == "__main__":
-    X, Y = get_xor_data()
+    X, Y = get_cancer_data()
 
     # Hiperparametry do eksperymentów w sprawozdaniu
-    HIDDEN_SIZE = 2
+    INPUT_SIZE = 30
+    HIDDEN_SIZE = 2  # fuck around with size for better results
     LEARNING_RATE = 0.5
     MAX_EPOCHS = 10000
     TARGET_ERROR = 0.001
     SEED = 42
 
     nn = NeuralNetwork1Hidden(
-        input_size=2,
+        input_size=INPUT_SIZE,
         hidden_size=HIDDEN_SIZE,
         output_size=1,
         seed=SEED,
@@ -60,34 +58,5 @@ if __name__ == "__main__":
             f"     {y_pred[0]:.4f}      |          {pred_bin}"
         )
 
-    # Generowanie kompletu wykresów do sprawozdania
-    plot_mse(
-        history["mse_out_total"],
-        history["mse_out_samples"],
-        layer_name="warstwa wyjściowa",
-        filename="mse_wyjsciowa.png",
-    )
-    plot_mse(
-        history["mse_hid_total"],
-        history["mse_hid_samples"],
-        layer_name="warstwa ukryta",
-        filename="mse_ukryta.png",
-    )
-    plot_classification_error(
-        history["class_errors"],
-        filename="blad_klasyfikacji.png",
-    )
-    plot_weights(
-        history["w1"],
-        layer_name="warstwa ukryta (W1)",
-        filename="wagi_ukryta.png",
-    )
-    plot_weights(
-        history["w2"],
-        layer_name="warstwa wyjściowa (W2)",
-        filename="wagi_wyjsciowa.png",
-    )
-    plot_learning_rate(
-        history["lr"],
-        filename="learning_rate.png",
-    )
+    generate_plots(history)
+    

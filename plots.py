@@ -74,3 +74,36 @@ def plot_learning_rate(lr_history, filename="learning_rate.png"):
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
     plt.close()
+
+    # Generowanie kompletu wykresów do sprawozdania
+def generate_plots(history):
+    plot_mse(
+        history["mse_out_total"],
+        history["mse_out_samples"],
+        layer_name="warstwa wyjściowa",
+        filename="plots/mse_wyjsciowa.png",
+    )
+    plot_mse(
+        history["mse_hid_total"],
+        history["mse_hid_samples"],
+        layer_name="warstwa ukryta",
+        filename="plots/mse_ukryta.png",
+    )
+    plot_classification_error(
+        history["class_errors"],
+        filename="plots/blad_klasyfikacji.png",
+    )
+    plot_weights(
+        history["w1"],
+        layer_name="warstwa ukryta (W1)",
+        filename="plots/wagi_ukryta.png",
+    )
+    plot_weights(
+        history["w2"],
+        layer_name="warstwa wyjściowa (W2)",
+        filename="plots/wagi_wyjsciowa.png",
+    )
+    plot_learning_rate(
+        history["lr"],
+        filename="plots/learning_rate.png",
+    )
