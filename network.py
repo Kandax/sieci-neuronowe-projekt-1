@@ -2,12 +2,14 @@ import numpy as np
 
 
 def sigmoid(z):
-    z = np.clip(z, -500.0, 500.0)
-    return 1.0 / (1.0 + np.exp(-z))
+    # Ograniczenie zakresu zabezpiecza przed przepełnieniem (overflow) w np.exp(-z)
+    z_clipped = np.clip(z, -500.0, 500.0)
+    return 1.0 / (1.0 + np.exp(-z_clipped))
 
 
 def sigmoid_derivative(a):
     return a * (1.0 - a)
+
 
 class NeuralNetwork1Hidden:
     def __init__(self, input_size, hidden_size, output_size, seed=42):
@@ -16,62 +18,57 @@ class NeuralNetwork1Hidden:
         self.output_size = output_size
         np.random.seed(seed)
 
-        # wagi i biasy inicjalizowane losowo w zakresie [-1, 1]
+        # Wagi i biasy inicjalizowane losowo w zakresie [-1, 1]
         self.W_1 = np.random.uniform(-1.0, 1.0, size=(hidden_size, input_size))
         self.b_1 = np.zeros((hidden_size, 1))
         self.W_2 = np.random.uniform(-1.0, 1.0, size=(output_size, hidden_size))
         self.b_2 = np.zeros((output_size, 1))
 
-        # macierze prędkości (momentum) zainicjalizowane zerami
+        # Macierze prędkości (momentum) zainicjalizowane zerami
         self.vW_1 = np.zeros_like(self.W_1)
         self.vb_1 = np.zeros_like(self.b_1)
         self.vW_2 = np.zeros_like(self.W_2)
         self.vb_2 = np.zeros_like(self.b_2)
 
-
     def forward(self, X):
-        Z1 = self.W_1 @ X + self.b_1
-        A1 = sigmoid(Z1)
+        self.Z1 = self.W_1 @ X + self.b_1
+        self.A1 = sigmoid(self.Z1)
 
-        Z_2 = self.W_2 @ A1 + self.b_2
-        A_2 = sigmoid(Z_2)
+        self.Z2 = self.W_2 @ self.A1 + self.b_2
+        self.A2 = sigmoid(self.Z2)
 
-        cache = {"Z1": Z1, "A1": A1, "Z_2": Z_2, "A_2": A_2}
-        return A_2, cache
+        return self.A2
 
-    
-    def backward(self, X, Y, cache):
-        A1 = cache["A1"]
-        A_2 = cache["A_2"]
+    def backward(self, X, Y, cache=None):
+        batch_m = X.shape[1]
 
         # Błąd i delta warstwy wyjściowej
-        E_2 = Y - A_2
-        delta_2 = 2 * E_2 * sigmoid_derivative(A_2)
+        E_2 = Y - self.A2
+        deltA2 = 2 * E_2 * sigmoid_derivative(self.A2)
 
         # Błąd cofnięty i delta warstwy ukrytej
-        E1 = self.W_2.T @ delta_2
-        delta1 = E1 * sigmoid_derivative(A1)
+        E1 = self.W_2.T @ deltA2
+        delta1 = E1 * sigmoid_derivative(self.A1)
 
-        # Gradienty wag i biasów (przesunięć)
+        # Gradienty uśrednione po liczbie próbek w paczce (batch_m)
         grads = {
-            "dW_2": delta_2 @ A1.T,
-            "db_2": np.sum(delta_2, axis=1, keepdims=True),
-            "dW_1": delta1 @ X.T,
-            "db_1": np.sum(delta1, axis=1, keepdims=True),
+            "dW_2": (deltA2 @ self.A1.T) / batch_m,
+            "db_2": np.sum(deltA2, axis=1, keepdims=True) / batch_m,
+            "dW_1": (delta1 @ X.T) / batch_m,
+            "db_1": np.sum(delta1, axis=1, keepdims=True) / batch_m,
         }
         errors = {"E1": E1, "E_2": E_2}
 
         return grads, errors
 
-
     def update(self, grads, learning_rate, momentum=0.9):
-        # obliczenie nowej prędkości
+        # Obliczenie nowej prędkości
         self.vW_2 = momentum * self.vW_2 + learning_rate * grads["dW_2"]
         self.vb_2 = momentum * self.vb_2 + learning_rate * grads["db_2"]
         self.vW_1 = momentum * self.vW_1 + learning_rate * grads["dW_1"]
         self.vb_1 = momentum * self.vb_1 + learning_rate * grads["db_1"]
 
-        # aktualizacja wag i biasów o wyliczoną prędkość
+        # Aktualizacja wag i biasów o wyliczoną prędkość
         self.W_2 += self.vW_2
         self.b_2 += self.vb_2
         self.W_1 += self.vW_1
@@ -83,7 +80,7 @@ class NeuralNetwork1Hidden:
         Y,
         learning_rate,
         epochs,
-        batch_size=None,  # None oznacza cały zbiór (Full Batch), np. 4 dla XOR
+        batch_size=None,  # None oznacza cały zbiór (Full Batch)
         target_error=1e-4,
         momentum=0.9,
         adaptive_lr=True,
@@ -108,11 +105,12 @@ class NeuralNetwork1Hidden:
 
         stopped_epoch = epochs
         prev_mse = None
+        prev_params = None
 
         for epoch in range(1, epochs + 1):
             # 1. Ewaluacja na całym zbiorze X przed krokiem (do metryk, wykresów i warunku stopu)
-            A_2, cache = self.forward(X)
-            _, errors = self.backward(X, Y, cache)
+            A2 = self.forward(X)
+            _, errors = self.backward(X, Y)
 
             sq_err_out = errors["E_2"] ** 2
             mse_out_total = float(np.mean(sq_err_out))
@@ -122,7 +120,7 @@ class NeuralNetwork1Hidden:
             mse_hid_total = float(np.mean(sq_err_hid))
             mse_hid_samples = np.mean(sq_err_hid, axis=0)
 
-            predictions = (A_2 >= 0.5).astype(float)
+            predictions = (A2 >= 0.5).astype(float)
             class_error = int(np.sum(predictions != Y))
 
             history["mse_out_total"].append(mse_out_total)
@@ -159,7 +157,7 @@ class NeuralNetwork1Hidden:
                 "b_2": self.b_2.copy(),
             }
 
-            # 3. Właściwe uczenie w paczkach (mini-batch) z losowym tasowaniem
+            # 3. Uczenie w paczkach (mini-batch) z losowym tasowaniem
             permutation = np.random.permutation(m)
             X_shuffled = X[:, permutation]
             Y_shuffled = Y[:, permutation]
@@ -168,14 +166,12 @@ class NeuralNetwork1Hidden:
                 X_batch = X_shuffled[:, i : i + batch_size]
                 Y_batch = Y_shuffled[:, i : i + batch_size]
 
-                _, batch_cache = self.forward(X_batch)
-                grads, _ = self.backward(X_batch, Y_batch, batch_cache)
+                self.forward(X_batch)
+                grads, _ = self.backward(X_batch, Y_batch)
 
-                # Uśrednienie gradientu przez aktualny rozmiar paczki (lub przez m dla spójnej skali)
-                scale = X_batch.shape[1] / m
-                self.update(grads, learning_rate * scale, momentum=momentum)
+                self.update(grads, learning_rate, momentum=momentum)
 
         for key in history:
-            history[key] = np.array(history[key])
+            history[key] = np.array(history[key], dtype=np.float32)
 
         return history, stopped_epoch

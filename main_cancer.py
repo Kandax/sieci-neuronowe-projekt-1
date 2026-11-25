@@ -1,12 +1,7 @@
-import numpy as np
-from network import NeuralNetwork1Hidden
-from plots import (
-    generate_plots
-)
-
-
 import csv
 import numpy as np
+from network import NeuralNetwork1Hidden
+from plots import generate_plots
 
 
 def get_cancer_data(filepath="data.csv"):
@@ -65,8 +60,8 @@ if __name__ == "__main__":
     INPUT_SIZE = 30
     HIDDEN_SIZE = 12
     LEARNING_RATE = 0.5
-    MAX_EPOCHS = 5000
-    TARGET_ERROR = 1e-4
+    MAX_EPOCHS = 3000
+    TARGET_ERROR = 0.001
 
     nn = NeuralNetwork1Hidden(
         input_size=INPUT_SIZE,
@@ -90,17 +85,17 @@ if __name__ == "__main__":
     )
 
     # 2. Podsumowanie wyników dla zbioru treningowego i testowego
-    train_out, _ = nn.forward(X_train)
+    train_out = nn.forward(X_train)
     train_acc = np.mean((train_out >= 0.5) == Y_train) * 100
 
-    test_out, _ = nn.forward(X_test)
+    test_out = nn.forward(X_test)
     test_mse = float(np.mean((Y_test - test_out) ** 2))
     test_errors = int(np.sum((test_out >= 0.5) != Y_test))
     test_acc = np.mean((test_out >= 0.5) == Y_test) * 100
 
     print(f"Zakończono na epoce: {final_epoch} / {MAX_EPOCHS}")
-    print(f"Trening -> MSE: {history['mse_out_total'][-1]:.6f} | Accuracy: {train_acc:.2f}%")
-    print(f"Test    -> MSE: {test_mse:.6f} | Accuracy: {test_acc:.2f}% (błędy: {test_errors} / {X_test.shape[1]})\n")
+    print(f"Trening -> MSE (błąd średniokwadratowy): {history['mse_out_total'][-1]:.6f} | Accuracy (dokładność): {train_acc:.2f}%")
+    print(f"Test    -> MSE (błąd średniokwadratowy): {test_mse:.6f} | Accuracy (dokładność): {test_acc:.2f}% (błędy: {test_errors} / {X_test.shape[1]})\n")
 
     print("Wejście | Oczekiwane | Predykcja sieci | Po progowaniu (0-1)")
     for x_col, y_true, y_pred in zip(X_test.T, Y_test.T, test_out.T):
