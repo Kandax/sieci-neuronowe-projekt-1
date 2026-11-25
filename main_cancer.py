@@ -48,17 +48,25 @@ def get_cancer_data(filepath="data.csv"):
     return X, Y
 
 
-
 if __name__ == "__main__":
-    X, Y = get_cancer_data()
+    X_all, Y_all = get_cancer_data()
+
+    # 1. Losowy podział na zbiór treningowy (80%) i testowy (20%)
+    SEED = 42
+    np.random.seed(SEED)
+    m_total = X_all.shape[1]
+    perm = np.random.permutation(m_total)
+    split = int(0.8 * m_total)
+
+    X_train, Y_train = X_all[:, perm[:split]], Y_all[:, perm[:split]]
+    X_test, Y_test = X_all[:, perm[split:]], Y_all[:, perm[split:]]
 
     # Hiperparametry do eksperymentów w sprawozdaniu
     INPUT_SIZE = 30
-    HIDDEN_SIZE = 30  # fuck around with size for better results
+    HIDDEN_SIZE = 12
     LEARNING_RATE = 0.5
-    MAX_EPOCHS = 100000
-    TARGET_ERROR = 0.001
-    SEED = 42
+    MAX_EPOCHS = 5000
+    TARGET_ERROR = 1e-4
 
     nn = NeuralNetwork1Hidden(
         input_size=INPUT_SIZE,
@@ -68,27 +76,34 @@ if __name__ == "__main__":
     )
 
     history, final_epoch = nn.train(
-            X,
-            Y,
-            learning_rate=LEARNING_RATE,
-            epochs=MAX_EPOCHS,
-            batch_size=None,  # None oznacza cały zbiór (Full Batch), np. 4 dla XOR
-            target_error=1e-4,
-            momentum=0.9,
-            adaptive_lr=True,
-            lr_inc=1.05,
-            lr_dec=0.7,
-            max_error_ratio=1.04,
-        )
+        X_train,
+        Y_train,
+        learning_rate=LEARNING_RATE,
+        epochs=MAX_EPOCHS,
+        batch_size=32,
+        target_error=TARGET_ERROR,
+        momentum=0.9,
+        adaptive_lr=True,
+        lr_inc=1.05,
+        lr_dec=0.7,
+        max_error_ratio=1.04,
+    )
 
-    # Podsumowanie wyników w konsoli
-    final_output, _ = nn.forward(X)
+    # 2. Podsumowanie wyników dla zbioru treningowego i testowego
+    train_out, _ = nn.forward(X_train)
+    train_acc = np.mean((train_out >= 0.5) == Y_train) * 100
+
+    test_out, _ = nn.forward(X_test)
+    test_mse = float(np.mean((Y_test - test_out) ** 2))
+    test_errors = int(np.sum((test_out >= 0.5) != Y_test))
+    test_acc = np.mean((test_out >= 0.5) == Y_test) * 100
+
     print(f"Zakończono na epoce: {final_epoch} / {MAX_EPOCHS}")
-    print(f"Końcowe MSE warstwy wyjściowej: {history['mse_out_total'][-1]:.6f}")
-    print(f"Końcowy błąd klasyfikacji: {history['class_errors'][-1]} / 4\n")
+    print(f"Trening -> MSE: {history['mse_out_total'][-1]:.6f} | Accuracy: {train_acc:.2f}%")
+    print(f"Test    -> MSE: {test_mse:.6f} | Accuracy: {test_acc:.2f}% (błędy: {test_errors} / {X_test.shape[1]})\n")
 
     print("Wejście | Oczekiwane | Predykcja sieci | Po progowaniu (0-1)")
-    for x_col, y_true, y_pred in zip(X.T, Y.T, final_output.T):
+    for x_col, y_true, y_pred in zip(X_test.T, Y_test.T, test_out.T):
         pred_bin = int(y_pred[0] >= 0.5)
         x_str = ",".join(f"{v:.2f}" for v in x_col)
         print(
@@ -97,4 +112,3 @@ if __name__ == "__main__":
         )
 
     generate_plots(history)
-    
